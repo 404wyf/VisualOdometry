@@ -1,0 +1,3 @@
+/home/wyf404/Desktop/vscode/VisualOdometry/build/CMakeFiles/main.dir
+/home/wyf404/Desktop/vscode/VisualOdometry/build/CMakeFiles/edit_cache.dir
+/home/wyf404/Desktop/vscode/VisualOdometry/build/CMakeFiles/rebuild_cache.dir
