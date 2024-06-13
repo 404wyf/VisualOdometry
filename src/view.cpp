@@ -40,6 +40,7 @@
 void View:: show_trajectory(vector<Eigen::Isometry3d>& poses, vector<Point3f>& current_frame_points) 
 {
     if (poses.empty()) return;
+    
     pangolin::CreateWindowAndBind("Trajectory Viewer", 1024, 768);
     glEnable(GL_DEPTH_TEST);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // 设置背景颜色为白色

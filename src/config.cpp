@@ -1,6 +1,5 @@
 #include "slam/config.h"
 
-
 ConfigReader::ConfigReader(const std::string& filename) {
     cv::FileStorage fs(filename, cv::FileStorage::READ);
     if (!fs.isOpened()) {

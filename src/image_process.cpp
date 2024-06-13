@@ -3,6 +3,9 @@
 #include "slam/config.h"
 using namespace myslam;
 
+/*
+相机坐标系
+ pixel2cam 将像素坐标转换为相机坐标。它所使用的两个参数分别是一个像素坐标 p 和相机内参矩阵 K*/
 Point2d ImageProcess:: pixel2cam(const Point2d& p, const Mat& K) {
     return Point2d(
         (p.x - K.at<double>(0, 2)) / K.at<double>(0, 0),
@@ -11,6 +14,8 @@ Point2d ImageProcess:: pixel2cam(const Point2d& p, const Mat& K) {
 }
 
 // 特征点匹配
+/*
+使用了opencv的 ORB（Oriented FAST and Rotated BRIEF）特征检测器和描述符，以及 Hamming 距离来进行特征匹配*/
 void ImageProcess::find_feature_matches(const Mat& img_1, const Mat& img_2, std::vector<KeyPoint>& keypoints_1,
                           std::vector<KeyPoint>& keypoints_2, std::vector<DMatch>& matches) 
 {
@@ -39,6 +44,7 @@ void ImageProcess::find_feature_matches(const Mat& img_1, const Mat& img_2, std:
     printf("Max : %f \n", max_dist);
     printf("Min : %f \n", min_dist);
 
+
     for (int i = 0; i < descriptors_1.rows; i++) {
         if (match[i].distance <= max(2 * min_dist, 30.0)) {
             matches.push_back(match[i]);
@@ -50,6 +56,8 @@ void ImageProcess::find_feature_matches(const Mat& img_1, const Mat& img_2, std:
 
 
 // 使用Eigen计算3D-3D变换
+/*
+pts1 3D世界坐标系 pts2相机坐标系*/
 Eigen::Isometry3d ImageProcess::estimateTransform(const vector<Point3f>& pts1, const vector<Point3f>& pts2) 
 {
     // 计算中心
@@ -77,16 +85,19 @@ Eigen::Isometry3d ImageProcess::estimateTransform(const vector<Point3f>& pts1, c
 
     // SVD分解
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(W, Eigen::ComputeFullU | Eigen::ComputeFullV);
+     // 计算W的奇异值分解，得到U和V矩阵
     Eigen::Matrix3d U = svd.matrixU();
     Eigen::Matrix3d V = svd.matrixV();
 
     Eigen::Matrix3d R = U * (V.transpose());
+    /*平移向量 t 是通过从世界坐标系中的中心点 p1 减去相机坐标系中的中心点 p2 
+    经过旋转后的结果。这里 p1 和 p2 分别是 pts1 和 pts2 的中心点。*/
     Eigen::Vector3d t = Eigen::Vector3d(p1.x, p1.y, p1.z) - R * Eigen::Vector3d(p2.x, p2.y, p2.z);
 
     // 生成变换矩阵
     Eigen::Isometry3d T = Eigen::Isometry3d::Identity();
-    T.rotate(R);
-    T.pretranslate(t);
+    T.rotate(R);// 将旋转矩阵R添加到T
+    T.pretranslate(t);// 将平移向量t添加到T
     return T;
 }
 
@@ -146,12 +157,16 @@ int ImageProcess::image_process(View& view) {
         Mat d2 = imread(depth_files[i + 1], IMREAD_UNCHANGED);
 
         vector<Point3f> pts_3d_1, pts_3d_2;
+        /*
+         pts_3d_1 和 pts_3d_2 分别表示世界坐标系和相机坐标系中的3D点。
+        变换矩阵的估计通过匹配点对的3D坐标来完成，并进行SVD分解计算出旋转矩阵和平移向量。
+        累积每帧的位姿，将相机坐标系中的点转换到世界坐标系*/
         for (DMatch m : matches) {
             ushort d_1 = d1.ptr<unsigned short>(int(keypoints_1[m.queryIdx].pt.y))[int(keypoints_1[m.queryIdx].pt.x)];
             ushort d_2 = d2.ptr<unsigned short>(int(keypoints_2[m.trainIdx].pt.y))[int(keypoints_2[m.trainIdx].pt.x)];
             if (d_1 == 0 || d_2 == 0)
                 continue;
-            float dd_1 = d_1 / 1000.0;
+            float dd_1 = d_1 / 1000.0;//深度值转化为米
             float dd_2 = d_2 / 1000.0;
             Point2d p1 = pixel2cam(keypoints_1[m.queryIdx].pt, K);
             Point2d p2 = pixel2cam(keypoints_2[m.trainIdx].pt, K);
