@@ -189,7 +189,7 @@ int ImageProcess::image_process(View& view) {
 
         // 累积位姿
         if (!C_W_poses.empty()) {
-            C_W_pose = C_W_poses.back() * C_W_pose;
+            C_W_pose = C_W_poses.back() * C_W_pose.inverse();
         }
         C_W_poses.push_back(C_W_pose);
 
