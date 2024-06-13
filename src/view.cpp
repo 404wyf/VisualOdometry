@@ -40,7 +40,7 @@
 void View:: show_trajectory(vector<Eigen::Isometry3d>& poses, vector<Point3f>& current_frame_points) 
 {
     if (poses.empty()) return;
-    
+
     pangolin::CreateWindowAndBind("Trajectory Viewer", 1024, 768);
     glEnable(GL_DEPTH_TEST);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // 设置背景颜色为白色
@@ -106,9 +106,10 @@ void View:: show_trajectory(vector<Eigen::Isometry3d>& poses, vector<Point3f>& c
             Eigen::Vector3d up = last_pose.rotation() * Eigen::Vector3d(0, -1, 0);
 
             // 设置一个相对相机后方的位置作为观察点，使视角更大
-            Eigen::Vector3d third_person_position = camera_position - forward * 4.0 + up * 4.0; // 调整此参数以改变相机视角
+            Eigen::Vector3d third_person_position = camera_position - forward * 2.0 + up * 4.0; // 调整此参数以改变相机视角
             Eigen::Vector3d look_at_point = camera_position; // 看向相机位置
 
+            //更新相机位置，follow camera
             s_cam.SetModelViewMatrix(pangolin::ModelViewLookAt(
                 third_person_position.x(), third_person_position.y(), third_person_position.z(),
                 look_at_point.x(), look_at_point.y(), look_at_point.z(),
