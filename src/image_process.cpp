@@ -57,8 +57,8 @@ void ImageProcess::find_feature_matches(const Mat& img_1, const Mat& img_2, std:
 
 // 使用Eigen计算3D-3D变换
 /*
-pts1 3D世界坐标系 pts2相机坐标系*/
-Eigen::Isometry3d ImageProcess::estimateTransform(const vector<Point3f>& pts1, const vector<Point3f>& pts2) 
+每一帧的位姿 pose 是当前帧相对于世界坐标系的位姿。这个位姿通常表示为一个刚体变换矩阵（包含旋转和平移）*/
+Eigen::Isometry3d ImageProcess::C_W_estimateTransform(const vector<Point3f>& pts1, const vector<Point3f>& pts2) 
 {
     // 计算中心
     Point3f p1, p2;
@@ -158,7 +158,6 @@ int ImageProcess::image_process(View& view) {
 
         vector<Point3f> pts_3d_1, pts_3d_2;
         /*
-         pts_3d_1 和 pts_3d_2 分别表示世界坐标系和相机坐标系中的3D点。
         变换矩阵的估计通过匹配点对的3D坐标来完成，并进行SVD分解计算出旋转矩阵和平移向量。
         累积每帧的位姿，将相机坐标系中的点转换到世界坐标系*/
         for (DMatch m : matches) {
@@ -168,8 +167,11 @@ int ImageProcess::image_process(View& view) {
                 continue;
             float dd_1 = d_1 / 1000.0;//深度值转化为米
             float dd_2 = d_2 / 1000.0;
+
+            //从像素坐标到相机坐标的转换
             Point2d p1 = pixel2cam(keypoints_1[m.queryIdx].pt, K);
             Point2d p2 = pixel2cam(keypoints_2[m.trainIdx].pt, K);
+            //构造相机坐标系中的3D点
             pts_3d_1.push_back(Point3f(p1.x * dd_1, p1.y * dd_1, dd_1));
             pts_3d_2.push_back(Point3f(p2.x * dd_2, p2.y * dd_2, dd_2));
         }
@@ -182,21 +184,23 @@ int ImageProcess::image_process(View& view) {
         }
 
         // 估计变换矩阵
-        Eigen::Isometry3d pose = estimateTransform(pts_3d_1, pts_3d_2);
-        cout << "Estimated pose:\n" << pose.matrix() << endl;
+        Eigen::Isometry3d C_W_pose = C_W_estimateTransform(pts_3d_1, pts_3d_2);
+        cout << "Estimated pose:\n" << C_W_pose.matrix() << endl;
 
         // 累积位姿
-        if (!poses.empty()) {
-            pose = poses.back() * pose;
+        if (!C_W_poses.empty()) {
+            C_W_pose = C_W_poses.back() * C_W_pose;
         }
-        poses.push_back(pose);
+        C_W_poses.push_back(C_W_pose);
 
         // 更新当前帧的3D特征点，转换到世界坐标系
-        current_frame_points.clear();
+        /*
+        transformed_point=pose⋅point=R*point+t*/
+        current_W_frame_points.clear();
         for (const auto& pt : pts_3d_2) {
             Eigen::Vector3d point(pt.x, pt.y, pt.z);
-            Eigen::Vector3d transformed_point = pose * point;
-            current_frame_points.push_back(Point3f(transformed_point.x(), transformed_point.y(), transformed_point.z()));
+            Eigen::Vector3d transformed_point = C_W_pose * point;
+            current_W_frame_points.push_back(Point3f(transformed_point.x(), transformed_point.y(), transformed_point.z()));
         }
     }
     return 0;

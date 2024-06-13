@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
     thread image_thread(&ImageProcess::image_process, &img_pro, ref(view));
     
     while (true) {
-        view.show_trajectory(myslam::poses, myslam:: current_frame_points);
+        view.show_trajectory(myslam::C_W_poses, myslam:: current_W_frame_points);
     }
 
     image_thread.join();
